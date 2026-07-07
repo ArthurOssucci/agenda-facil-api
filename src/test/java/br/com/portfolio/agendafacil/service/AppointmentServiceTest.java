@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class AppointmentServiceTest {
@@ -48,19 +49,9 @@ class AppointmentServiceTest {
     void shouldRejectAppointmentWhenProfessionalAlreadyHasScheduledAppointment() {
         var startsAt = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0);
         var endsAt = startsAt.plusMinutes(30);
-        var professional = new Professional();
-        ReflectionTestUtils.setField(professional, "id", 1L);
-        var serviceOffering = new ServiceOffering();
-        ReflectionTestUtils.setField(serviceOffering, "id", 1L);
-        serviceOffering.setName("Consulta");
-        serviceOffering.setDurationMinutes(30);
-        serviceOffering.setPrice(BigDecimal.valueOf(100));
-
-        var availability = new Availability();
-        availability.setProfessional(professional);
-        availability.setDayOfWeek(startsAt.getDayOfWeek());
-        availability.setStartsAt(LocalTime.of(9, 0));
-        availability.setEndsAt(LocalTime.of(18, 0));
+        var professional = professional(1L);
+        var serviceOffering = serviceOffering(1L, 30);
+        var availability = availability(professional, startsAt, LocalTime.of(9, 0), LocalTime.of(18, 0));
 
         when(professionalRepository.findById(1L)).thenReturn(Optional.of(professional));
         when(serviceRepository.findById(1L)).thenReturn(Optional.of(serviceOffering));
@@ -69,19 +60,100 @@ class AppointmentServiceTest {
         when(appointmentRepository.existsConflict(1L, startsAt, endsAt, AppointmentStatus.SCHEDULED))
                 .thenReturn(true);
 
-        var client = new User();
-        client.setName("Cliente");
-        client.setEmail("cliente@email.com");
-        client.setPassword("secret");
-        client.setRole(UserRole.CLIENT);
-
         assertThatThrownBy(() -> service.schedule(
                 new AppointmentRequest(1L, 1L, startsAt),
-                new AuthenticatedUser(client)
+                new AuthenticatedUser(user(UserRole.CLIENT))
         )).isInstanceOf(BusinessException.class)
                 .hasMessage("Profissional ja possui agendamento neste horario");
 
         verify(appointmentRepository, never()).save(any());
         verify(appointmentRepository).existsConflict(eq(1L), eq(startsAt), eq(endsAt), eq(AppointmentStatus.SCHEDULED));
+    }
+
+    @Test
+    void shouldRejectAppointmentWhenAuthenticatedUserIsNotClient() {
+        var startsAt = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0);
+
+        assertThatThrownBy(() -> service.schedule(
+                new AppointmentRequest(1L, 1L, startsAt),
+                new AuthenticatedUser(user(UserRole.ADMIN))
+        )).isInstanceOf(BusinessException.class)
+                .hasMessage("Apenas usuarios com perfil CLIENT podem criar agendamentos");
+
+        verifyNoInteractions(professionalRepository, serviceRepository, availabilityRepository, appointmentRepository);
+    }
+
+    @Test
+    void shouldRejectAppointmentInThePast() {
+        var startsAt = LocalDateTime.now().minusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0);
+
+        assertThatThrownBy(() -> service.schedule(
+                new AppointmentRequest(1L, 1L, startsAt),
+                new AuthenticatedUser(user(UserRole.CLIENT))
+        )).isInstanceOf(BusinessException.class)
+                .hasMessage("Agendamento deve ser feito para uma data futura");
+
+        verifyNoInteractions(professionalRepository, serviceRepository, availabilityRepository, appointmentRepository);
+    }
+
+    @Test
+    void shouldRejectAppointmentOutsideProfessionalAvailability() {
+        var startsAt = LocalDateTime.now().plusDays(1).withHour(8).withMinute(0).withSecond(0).withNano(0);
+        var professional = professional(1L);
+        var serviceOffering = serviceOffering(1L, 30);
+        var availability = availability(professional, startsAt, LocalTime.of(9, 0), LocalTime.of(18, 0));
+
+        when(professionalRepository.findById(1L)).thenReturn(Optional.of(professional));
+        when(serviceRepository.findById(1L)).thenReturn(Optional.of(serviceOffering));
+        when(availabilityRepository.findByProfessionalIdAndDayOfWeek(1L, startsAt.getDayOfWeek()))
+                .thenReturn(List.of(availability));
+
+        assertThatThrownBy(() -> service.schedule(
+                new AppointmentRequest(1L, 1L, startsAt),
+                new AuthenticatedUser(user(UserRole.CLIENT))
+        )).isInstanceOf(BusinessException.class)
+                .hasMessage("Horario fora da disponibilidade do profissional");
+
+        verify(appointmentRepository, never()).save(any());
+    }
+
+    private User user(UserRole role) {
+        var user = new User();
+        user.setName(role.name());
+        user.setEmail(role.name().toLowerCase() + "@email.com");
+        user.setPassword("secret");
+        user.setRole(role);
+        return user;
+    }
+
+    private Professional professional(Long id) {
+        var professional = new Professional();
+        ReflectionTestUtils.setField(professional, "id", id);
+        professional.setUser(user(UserRole.PROFESSIONAL));
+        professional.setSpecialty("Clinico geral");
+        return professional;
+    }
+
+    private ServiceOffering serviceOffering(Long id, int durationMinutes) {
+        var serviceOffering = new ServiceOffering();
+        ReflectionTestUtils.setField(serviceOffering, "id", id);
+        serviceOffering.setName("Consulta");
+        serviceOffering.setDurationMinutes(durationMinutes);
+        serviceOffering.setPrice(BigDecimal.valueOf(100));
+        return serviceOffering;
+    }
+
+    private Availability availability(
+            Professional professional,
+            LocalDateTime date,
+            LocalTime startsAt,
+            LocalTime endsAt
+    ) {
+        var availability = new Availability();
+        availability.setProfessional(professional);
+        availability.setDayOfWeek(date.getDayOfWeek());
+        availability.setStartsAt(startsAt);
+        availability.setEndsAt(endsAt);
+        return availability;
     }
 }
