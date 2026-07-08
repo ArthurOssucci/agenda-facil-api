@@ -21,6 +21,16 @@ O projeto simula um fluxo real de agenda: um administrador cadastra servicos e p
 - Teste unitario para regra de conflito de agendamento
 - Arquitetura em camadas: controller, service, repository, domain e dto
 
+### Screenshots
+
+Swagger com documentacao dos endpoints e autenticacao JWT:
+
+![Swagger overview](docs/images/swagger-overview.png)
+
+Endpoint de agendamentos com filtros opcionais por periodo:
+
+![Appointment filters](docs/images/swagger-appointment-filters.png)
+
 ### Funcionalidades
 
 - Cadastro e login com JWT
@@ -262,6 +272,16 @@ The project simulates a real scheduling workflow: an administrator creates servi
 - PostgreSQL as the main database
 - Unit test for appointment conflict validation
 - Layered architecture: controller, service, repository, domain and dto
+
+### Screenshots
+
+Swagger with endpoint documentation and JWT authentication:
+
+![Swagger overview](docs/images/swagger-overview.png)
+
+Appointment endpoint with optional date range filters:
+
+![Appointment filters](docs/images/swagger-appointment-filters.png)
 
 ### Features
 
