@@ -2,6 +2,8 @@
 
 [Portugues](#portugues) | [English](#english)
 
+Roadmap: [ROADMAP.md](ROADMAP.md)
+
 ## Portugues
 
 API REST para agendamento de servicos, criada como projeto de portfolio Java com Spring Boot.
