@@ -216,7 +216,7 @@ Se repetir o mesmo horario para o mesmo profissional, a API deve bloquear com:
 | `POST` | `/professionals/availability` | Cria disponibilidade |
 | `GET` | `/professionals/{id}/availability` | Lista disponibilidade |
 | `POST` | `/appointments` | Cria agendamento, apenas cliente |
-| `GET` | `/appointments/me` | Lista meus agendamentos |
+| `GET` | `/appointments/me` | Lista meus agendamentos, com filtros opcionais `startDate` e `endDate` |
 | `PATCH` | `/appointments/{id}/cancel` | Cancela agendamento |
 
 ### Regras De Negocio
@@ -229,6 +229,14 @@ Se repetir o mesmo horario para o mesmo profissional, a API deve bloquear com:
 - Clientes visualizam seus proprios agendamentos.
 - Profissionais visualizam sua agenda.
 - Admin pode cancelar qualquer agendamento.
+
+### Filtro Por Periodo
+
+Use `startDate` e `endDate` juntos para filtrar os agendamentos:
+
+```text
+GET /appointments/me?startDate=2026-07-01&endDate=2026-07-31
+```
 
 ### Melhorias Futuras
 
@@ -450,7 +458,7 @@ If the same time is used again for the same professional, the API should reject 
 | `POST` | `/professionals/availability` | Creates availability |
 | `GET` | `/professionals/{id}/availability` | Lists availability |
 | `POST` | `/appointments` | Creates appointment, client only |
-| `GET` | `/appointments/me` | Lists my appointments |
+| `GET` | `/appointments/me` | Lists my appointments, with optional `startDate` and `endDate` filters |
 | `PATCH` | `/appointments/{id}/cancel` | Cancels appointment |
 
 ### Business Rules
@@ -463,6 +471,14 @@ If the same time is used again for the same professional, the API should reject 
 - Clients can view their own appointments.
 - Professionals can view their schedule.
 - Admin users can cancel any appointment.
+
+### Date Range Filter
+
+Use `startDate` and `endDate` together to filter appointments:
+
+```text
+GET /appointments/me?startDate=2026-07-01&endDate=2026-07-31
+```
 
 ### Future Improvements
 

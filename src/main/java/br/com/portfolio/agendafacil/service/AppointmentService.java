@@ -15,7 +15,9 @@ import br.com.portfolio.agendafacil.security.AuthenticatedUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -79,17 +81,28 @@ public class AppointmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<AppointmentResponse> listMine(AuthenticatedUser authenticatedUser) {
+    public List<AppointmentResponse> listMine(
+            AuthenticatedUser authenticatedUser,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        if ((startDate == null) != (endDate == null)) {
+            throw new BusinessException("Informe startDate e endDate juntos");
+        }
+        if (startDate != null && startDate.isAfter(endDate)) {
+            throw new BusinessException("startDate deve ser anterior ou igual a endDate");
+        }
+
         if (authenticatedUser.role() == UserRole.PROFESSIONAL) {
             return professionalRepository.findByUserId(authenticatedUser.id())
-                    .map(professional -> appointmentRepository.findByProfessionalIdOrderByStartsAtDesc(professional.getId()))
+                    .map(professional -> findProfessionalAppointments(professional.getId(), startDate, endDate))
                     .orElse(List.of())
                     .stream()
                     .map(mapper::toAppointmentResponse)
                     .toList();
         }
 
-        return appointmentRepository.findByClientIdOrderByStartsAtDesc(authenticatedUser.id()).stream()
+        return findClientAppointments(authenticatedUser.id(), startDate, endDate).stream()
                 .map(mapper::toAppointmentResponse)
                 .toList();
     }
@@ -120,5 +133,29 @@ public class AppointmentService {
         if (!insideAvailability) {
             throw new BusinessException("Horario fora da disponibilidade do profissional");
         }
+    }
+
+    private List<Appointment> findClientAppointments(Long clientId, LocalDate startDate, LocalDate endDate) {
+        if (startDate == null) {
+            return appointmentRepository.findByClientIdOrderByStartsAtDesc(clientId);
+        }
+
+        return appointmentRepository.findByClientIdAndStartsAtBetweenOrderByStartsAtDesc(
+                clientId,
+                startDate.atStartOfDay(),
+                endDate.atTime(LocalTime.MAX)
+        );
+    }
+
+    private List<Appointment> findProfessionalAppointments(Long professionalId, LocalDate startDate, LocalDate endDate) {
+        if (startDate == null) {
+            return appointmentRepository.findByProfessionalIdOrderByStartsAtDesc(professionalId);
+        }
+
+        return appointmentRepository.findByProfessionalIdAndStartsAtBetweenOrderByStartsAtDesc(
+                professionalId,
+                startDate.atStartOfDay(),
+                endDate.atTime(LocalTime.MAX)
+        );
     }
 }
