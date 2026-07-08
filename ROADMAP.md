@@ -40,6 +40,8 @@ Objetivos:
 
 #### 4. Filtros por periodo
 
+Status: implementado.
+
 Adicionar filtros de data para listagem de agendamentos.
 
 Objetivos:
@@ -105,6 +107,8 @@ Goals:
 - Allow configuration through environment variables.
 
 #### 4. Date range filters
+
+Status: implemented.
 
 Add date filters for appointment listing.
 

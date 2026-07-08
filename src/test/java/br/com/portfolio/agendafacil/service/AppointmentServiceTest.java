@@ -17,11 +17,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -115,6 +117,49 @@ class AppointmentServiceTest {
                 .hasMessage("Horario fora da disponibilidade do profissional");
 
         verify(appointmentRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldListClientAppointmentsFilteredByDateRange() {
+        var startDate = LocalDate.of(2026, 7, 1);
+        var endDate = LocalDate.of(2026, 7, 31);
+        var client = user(UserRole.CLIENT);
+        ReflectionTestUtils.setField(client, "id", 10L);
+
+        when(appointmentRepository.findByClientIdAndStartsAtBetweenOrderByStartsAtDesc(
+                10L,
+                startDate.atStartOfDay(),
+                endDate.atTime(LocalTime.MAX)
+        )).thenReturn(List.of());
+
+        var response = service.listMine(new AuthenticatedUser(client), startDate, endDate);
+
+        assertThat(response).isEmpty();
+        verify(appointmentRepository).findByClientIdAndStartsAtBetweenOrderByStartsAtDesc(
+                10L,
+                startDate.atStartOfDay(),
+                endDate.atTime(LocalTime.MAX)
+        );
+    }
+
+    @Test
+    void shouldRejectDateFilterWhenOnlyStartDateIsProvided() {
+        assertThatThrownBy(() -> service.listMine(
+                new AuthenticatedUser(user(UserRole.CLIENT)),
+                LocalDate.of(2026, 7, 1),
+                null
+        )).isInstanceOf(BusinessException.class)
+                .hasMessage("Informe startDate e endDate juntos");
+    }
+
+    @Test
+    void shouldRejectDateFilterWhenStartDateIsAfterEndDate() {
+        assertThatThrownBy(() -> service.listMine(
+                new AuthenticatedUser(user(UserRole.CLIENT)),
+                LocalDate.of(2026, 8, 1),
+                LocalDate.of(2026, 7, 1)
+        )).isInstanceOf(BusinessException.class)
+                .hasMessage("startDate deve ser anterior ou igual a endDate");
     }
 
     private User user(UserRole role) {
