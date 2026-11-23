@@ -52,6 +52,8 @@ Objetivos:
 
 #### 5. Prints do Swagger no README
 
+Status: implementado.
+
 Adicionar imagens do Swagger para demonstrar endpoints, autorizacao JWT e fluxo de agendamento.
 
 Objetivos:
@@ -119,6 +121,8 @@ Goals:
 - Improve usage in dashboards or scheduling screens.
 
 #### 5. Swagger screenshots in README
+
+Status: implemented.
 
 Add Swagger images to demonstrate endpoints, JWT authorization and the appointment flow.
 

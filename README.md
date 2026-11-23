@@ -93,7 +93,11 @@ DB_USER=agenda
 DB_PASSWORD=agenda
 JWT_SECRET=change-this-secret-change-this-secret-change-this-secret
 JWT_EXPIRATION_MINUTES=120
+ADMIN_EMAIL=   # opcional / optional: cria o 1o admin / creates the first admin
+ADMIN_PASSWORD=
 ```
+
+Em producao, defina sempre `JWT_SECRET` (o padrao e apenas para desenvolvimento). / In production always set `JWT_SECRET` (the default is for development only).
 
 ### Testes
 
@@ -103,20 +107,15 @@ mvn test
 
 ### Fluxo Para Testar No Swagger
 
-#### 1. Criar Admin
+#### 1. Entrar Como Admin
 
-`POST /auth/register`
+O cadastro publico (`/auth/register`) cria apenas usuarios `CLIENT`. O primeiro admin e criado na inicializacao a partir de variaveis de ambiente:
 
-```json
-{
-  "name": "Admin",
-  "email": "admin@email.com",
-  "password": "123456",
-  "role": "ADMIN"
-}
+```bash
+ADMIN_EMAIL=admin@email.com ADMIN_PASSWORD=admin123 mvn spring-boot:run
 ```
 
-Copie o token retornado e clique em `Authorize` no Swagger. Informe o token como Bearer JWT.
+Faca `POST /auth/login` com esse e-mail e senha, copie o token retornado e clique em `Authorize` no Swagger. Informe o token como Bearer JWT.
 
 #### 2. Criar Servico
 
@@ -135,7 +134,7 @@ Guarde o `id` retornado. Ele sera usado como `serviceId`.
 
 #### 3. Criar Usuario Profissional
 
-`POST /auth/register`
+`POST /auth/register`, autenticado como admin (somente admin pode definir `role` diferente de `CLIENT`).
 
 ```json
 {
@@ -187,7 +186,7 @@ Troque `2` pelo `userId` real. Guarde o `id` retornado. Ele sera usado como `pro
 }
 ```
 
-Copie o token do cliente e atualize o `Authorize` do Swagger com ele.
+Copie o token do cliente (ou faca login com ele) e atualize o `Authorize` do Swagger com ele.
 
 #### 7. Criar Agendamento
 
@@ -238,7 +237,8 @@ Se repetir o mesmo horario para o mesmo profissional, a API deve bloquear com:
 - Cancelamento altera o status para `CANCELLED`; o registro nao e apagado.
 - Clientes visualizam seus proprios agendamentos.
 - Profissionais visualizam sua agenda.
-- Admin pode cancelar qualquer agendamento.
+- Cliente dono, profissional do agendamento e admin podem cancelar.
+- Cadastro publico cria apenas `CLIENT`; `ADMIN` e `PROFESSIONAL` exigem um admin autenticado.
 
 ### Filtro Por Periodo
 
@@ -248,11 +248,14 @@ Use `startDate` e `endDate` juntos para filtrar os agendamentos:
 GET /appointments/me?startDate=2026-07-01&endDate=2026-07-31
 ```
 
+### Limitacoes Conhecidas
+
+- A checagem de conflito de horario e feita na aplicacao; sob requisicoes simultaneas ainda pode haver corrida. Proximo passo: constraint de exclusao no PostgreSQL.
+
 ### Melhorias Futuras
 
 - Envio de e-mail de confirmacao
 - Reagendamento
-- Filtros por periodo
 - Testes de integracao com Testcontainers
 - Frontend em React ou Angular
 
@@ -345,7 +348,11 @@ DB_USER=agenda
 DB_PASSWORD=agenda
 JWT_SECRET=change-this-secret-change-this-secret-change-this-secret
 JWT_EXPIRATION_MINUTES=120
+ADMIN_EMAIL=   # opcional / optional: cria o 1o admin / creates the first admin
+ADMIN_PASSWORD=
 ```
+
+Em producao, defina sempre `JWT_SECRET` (o padrao e apenas para desenvolvimento). / In production always set `JWT_SECRET` (the default is for development only).
 
 ### Tests
 
@@ -355,20 +362,15 @@ mvn test
 
 ### Swagger Test Flow
 
-#### 1. Create Admin
+#### 1. Sign In As Admin
 
-`POST /auth/register`
+Public registration (`/auth/register`) only creates `CLIENT` users. The first admin is created at startup from environment variables:
 
-```json
-{
-  "name": "Admin",
-  "email": "admin@email.com",
-  "password": "123456",
-  "role": "ADMIN"
-}
+```bash
+ADMIN_EMAIL=admin@email.com ADMIN_PASSWORD=admin123 mvn spring-boot:run
 ```
 
-Copy the returned token and click `Authorize` in Swagger. Use it as a Bearer JWT token.
+Call `POST /auth/login` with that email and password, copy the returned token and click `Authorize` in Swagger. Use it as a Bearer JWT token.
 
 #### 2. Create Service
 
@@ -387,7 +389,7 @@ Save the returned `id`. It will be used as `serviceId`.
 
 #### 3. Create Professional User
 
-`POST /auth/register`
+`POST /auth/register`, authenticated as admin (only admins can set a `role` other than `CLIENT`).
 
 ```json
 {
@@ -490,7 +492,8 @@ If the same time is used again for the same professional, the API should reject 
 - Cancellation changes the status to `CANCELLED`; the record is not deleted.
 - Clients can view their own appointments.
 - Professionals can view their schedule.
-- Admin users can cancel any appointment.
+- The owning client, the appointment's professional and admins can cancel.
+- Public registration only creates `CLIENT`; `ADMIN` and `PROFESSIONAL` require an authenticated admin.
 
 ### Date Range Filter
 
@@ -500,10 +503,13 @@ Use `startDate` and `endDate` together to filter appointments:
 GET /appointments/me?startDate=2026-07-01&endDate=2026-07-31
 ```
 
+### Known Limitations
+
+- The time-conflict check runs in the application; concurrent requests can still race. Next step: a PostgreSQL exclusion constraint.
+
 ### Future Improvements
 
 - Confirmation email
 - Rescheduling
-- Period filters
 - Integration tests with Testcontainers
 - Frontend with React or Angular
