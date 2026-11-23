@@ -1,6 +1,7 @@
 package br.com.portfolio.agendafacil.service;
 
 import br.com.portfolio.agendafacil.domain.User;
+import br.com.portfolio.agendafacil.domain.UserRole;
 import br.com.portfolio.agendafacil.dto.AuthDtos.AuthResponse;
 import br.com.portfolio.agendafacil.dto.AuthDtos.LoginRequest;
 import br.com.portfolio.agendafacil.dto.AuthDtos.RegisterRequest;
@@ -8,6 +9,7 @@ import br.com.portfolio.agendafacil.exception.BusinessException;
 import br.com.portfolio.agendafacil.repository.UserRepository;
 import br.com.portfolio.agendafacil.security.AuthenticatedUser;
 import br.com.portfolio.agendafacil.security.JwtService;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,7 +37,13 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
+    public AuthResponse register(RegisterRequest request, AuthenticatedUser caller) {
+        var role = request.role() == null ? UserRole.CLIENT : request.role();
+        var callerIsAdmin = caller != null && caller.role() == UserRole.ADMIN;
+        if (role != UserRole.CLIENT && !callerIsAdmin) {
+            throw new AccessDeniedException("Apenas administradores podem criar usuarios com perfil " + role);
+        }
+
         if (userRepository.existsByEmail(request.email())) {
             throw new BusinessException("E-mail ja cadastrado");
         }
@@ -44,7 +52,7 @@ public class AuthService {
         user.setName(request.name());
         user.setEmail(request.email());
         user.setPassword(passwordEncoder.encode(request.password()));
-        user.setRole(request.role());
+        user.setRole(role);
         userRepository.save(user);
 
         return buildResponse(new AuthenticatedUser(user));

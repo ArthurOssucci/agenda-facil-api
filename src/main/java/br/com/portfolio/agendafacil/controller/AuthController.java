@@ -5,7 +5,9 @@ import br.com.portfolio.agendafacil.dto.AuthDtos.LoginRequest;
 import br.com.portfolio.agendafacil.dto.AuthDtos.RegisterRequest;
 import br.com.portfolio.agendafacil.service.AuthService;
 import jakarta.validation.Valid;
+import br.com.portfolio.agendafacil.security.AuthenticatedUser;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,8 +26,11 @@ public class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public AuthResponse register(@RequestBody @Valid RegisterRequest request) {
-        return authService.register(request);
+    public AuthResponse register(
+            @RequestBody @Valid RegisterRequest request,
+            @AuthenticationPrincipal AuthenticatedUser caller
+    ) {
+        return authService.register(request, caller);
     }
 
     @PostMapping("/login")
